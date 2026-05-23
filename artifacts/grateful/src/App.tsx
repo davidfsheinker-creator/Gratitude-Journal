@@ -28,32 +28,69 @@ function ProtectedRoute({ component: Component, params }: { component: React.Com
   return <Component params={params} />;
 }
 
+function AuthRoute({ component: Component }: { component: React.ComponentType }) {
+  const { token } = useAuth();
+  if (token) return <Redirect to="/" />;
+  return <Component />;
+}
+
 function Router() {
   const { token } = useAuth();
+  const [location] = useLocation();
 
   return (
     <Switch>
-      <Route path="/login" component={Login} />
-      <Route path="/signup" component={Signup} />
+      <Route path="/login">
+        <AuthRoute component={Login} />
+      </Route>
+      <Route path="/signup">
+        <AuthRoute component={Signup} />
+      </Route>
+
       <Route path="/">
         {token ? (
-          <Layout>
-            <Switch>
-              <Route path="/" component={Home} />
-              <Route path="/journal" component={Journal} />
-              <Route path="/journal/:date">
-                {(params) => <ProtectedRoute component={EntryDetail} params={params} />}
-              </Route>
-              <Route path="/week" component={Week} />
-              <Route path="/favorites" component={Favorites} />
-              <Route path="/calendar" component={Calendar} />
-              <Route component={NotFound} />
-            </Switch>
-          </Layout>
+          <Layout><Home /></Layout>
         ) : (
-          <Redirect to="/login" />
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
         )}
       </Route>
+      <Route path="/journal">
+        {token ? (
+          <Layout><Journal /></Layout>
+        ) : (
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
+        )}
+      </Route>
+      <Route path="/journal/:date">
+        {(params) => token ? (
+          <Layout><EntryDetail params={params} /></Layout>
+        ) : (
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
+        )}
+      </Route>
+      <Route path="/week">
+        {token ? (
+          <Layout><Week /></Layout>
+        ) : (
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
+        )}
+      </Route>
+      <Route path="/favorites">
+        {token ? (
+          <Layout><Favorites /></Layout>
+        ) : (
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
+        )}
+      </Route>
+      <Route path="/calendar">
+        {token ? (
+          <Layout><Calendar /></Layout>
+        ) : (
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
+        )}
+      </Route>
+
+      <Route component={NotFound} />
     </Switch>
   );
 }

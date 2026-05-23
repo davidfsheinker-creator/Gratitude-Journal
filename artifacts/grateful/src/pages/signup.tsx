@@ -6,12 +6,14 @@ import { useQueryClient } from "@tanstack/react-query";
 
 export function Signup() {
   const { signup, isLoading } = useAuth();
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const queryClient = useQueryClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
+
+  const redirectTo = new URLSearchParams(location.split("?")[1] ?? "").get("redirect") ?? "/";
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -21,7 +23,7 @@ export function Signup() {
     try {
       await signup(email, password);
       queryClient.clear();
-      navigate("/");
+      navigate(redirectTo);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : "Signup failed");
     }
