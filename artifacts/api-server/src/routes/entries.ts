@@ -156,7 +156,7 @@ router.get("/entries/onthisday", requireAuth, async (req, res) => {
 });
 
 router.get("/entries/week/:startDate", requireAuth, async (req, res) => {
-  const { startDate } = req.params;
+  const startDate = String(req.params.startDate);
   if (!startDate) { res.status(400).json({ error: "Invalid date" }); return; }
 
   const start = new Date(startDate);
@@ -198,7 +198,7 @@ router.get("/entries/week/:startDate", requireAuth, async (req, res) => {
 });
 
 router.get("/entries/:date", requireAuth, async (req, res) => {
-  const { date } = req.params;
+  const date = String(req.params.date);
   const [row] = await db
     .select()
     .from(entriesTable)
@@ -210,7 +210,7 @@ router.get("/entries/:date", requireAuth, async (req, res) => {
 });
 
 router.put("/entries/:date", requireAuth, async (req, res) => {
-  const { date } = req.params;
+  const date = String(req.params.date);
   const { gratitudeItems, reflection, mood, starred, categories } = req.body;
 
   if (categories !== undefined && Array.isArray(categories) && categories.length > 4) {
@@ -248,7 +248,7 @@ router.post(
     });
   },
   async (req, res) => {
-    const { date } = req.params;
+    const date = String(req.params.date);
 
     if (!req.file) { res.status(400).json({ error: "No photo uploaded" }); return; }
 
