@@ -1,15 +1,18 @@
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { Link } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";
 import {
   useGetEntryByDate,
   useUpdateEntry,
+  useGenerateQuote,
   getGetEntryByDateQueryKey,
   getListEntriesQueryKey,
   getGetFavoritesQueryKey,
 } from "@workspace/api-client-react";
 import { MoodPill } from "@/components/mood-pill";
-import { ArrowLeft, Star } from "lucide-react";
+import { TraditionQuote } from "@/components/tradition-quote";
+import { ArrowLeft, Star, Sparkles } from "lucide-react";
 
 function formatDate(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
@@ -22,6 +25,11 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
   const date = params?.date ?? "";
   const queryClient = useQueryClient();
   const updateEntry = useUpdateEntry();
+  const generateQuote = useGenerateQuote();
+
+  const [quote, setQuote] = useState<{ quote: string; source: string; connection: string } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
+  const [quoteError, setQuoteError] = useState("");
 
   const { data: entry, isLoading, isError } = useGetEntryByDate(date, {
     query: { queryKey: getGetEntryByDateQueryKey(date), enabled: !!date, retry: false },
@@ -39,6 +47,19 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
         },
       }
     );
+  }
+
+  async function handleGenerateQuote() {
+    setQuoteLoading(true);
+    setQuoteError("");
+    try {
+      const q = await generateQuote.mutateAsync({ date });
+      setQuote(q);
+    } catch {
+      setQuoteError("Couldn't generate a quote right now. Try again.");
+    } finally {
+      setQuoteLoading(false);
+    }
   }
 
   if (isLoading) {
@@ -131,6 +152,35 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
             <p className="text-foreground/80 leading-relaxed font-serif">{entry.reflection}</p>
           </motion.div>
         )}
+
+        {/* Tradition Quote */}
+        <motion.div
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.35 }}
+          className="rounded-2xl bg-card border border-border/60 p-5 flex flex-col gap-4"
+        >
+          {quote ? (
+            <TraditionQuote quote={quote.quote} source={quote.source} connection={quote.connection} />
+          ) : (
+            <div className="flex flex-col items-center gap-3 text-center py-2">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Wisdom for this entry</p>
+              {quoteError && (
+                <p className="text-xs text-destructive/70">{quoteError}</p>
+              )}
+              <button
+                onClick={handleGenerateQuote}
+                disabled={quoteLoading}
+                className="flex items-center gap-2 px-4 py-2 rounded-xl border border-border text-sm text-muted-foreground hover:text-foreground hover:border-primary/40 transition-all disabled:opacity-50"
+              >
+                {quoteLoading ? (
+                  <div className="w-4 h-4 rounded-full border-2 border-primary/40 border-t-primary animate-spin" />
+                ) : (
+                  <Sparkles className="w-4 h-4" />
+                )}
+                {quoteLoading ? "Finding a quote…" : "Surface a quote"}
+              </button>
+            </div>
+          )}
+        </motion.div>
 
         <p className="text-xs text-muted-foreground/50 text-right">
           Written {new Date(entry.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}

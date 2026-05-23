@@ -1,6 +1,6 @@
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "./theme-toggle";
-import { BookOpen, CalendarDays, PenLine, Star, LayoutGrid, LogOut } from "lucide-react";
+import { BookOpen, CalendarDays, PenLine, Star, LayoutGrid, LogOut, Settings } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -20,6 +20,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
     { href: "/favorites", icon: Star, label: "Favorites", active: location === "/favorites" },
     { href: "/week", icon: LayoutGrid, label: "Week", active: location === "/week" },
     { href: "/calendar", icon: CalendarDays, label: "Calendar", active: location === "/calendar" },
+    { href: "/settings", icon: Settings, label: "Settings", active: location === "/settings" },
   ];
 
   return (

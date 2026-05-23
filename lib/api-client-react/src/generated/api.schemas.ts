@@ -143,6 +143,20 @@ export interface PhotoUploadResponse {
   photoPath: string;
 }
 
+export interface UserSettings {
+  tradition: string;
+}
+
+export interface UserSettingsInput {
+  tradition: string;
+}
+
+export interface TraditionQuote {
+  quote: string;
+  source: string;
+  connection: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }

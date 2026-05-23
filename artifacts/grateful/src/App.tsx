@@ -11,6 +11,7 @@ import { EntryDetail } from "@/pages/entry-detail";
 import { Week } from "@/pages/week";
 import { Favorites } from "@/pages/favorites";
 import { Calendar } from "@/pages/calendar";
+import { Settings } from "@/pages/settings";
 import { Login } from "@/pages/login";
 import { Signup } from "@/pages/signup";
 import NotFound from "@/pages/not-found";
@@ -85,6 +86,13 @@ function Router() {
       <Route path="/calendar">
         {token ? (
           <Layout><Calendar /></Layout>
+        ) : (
+          <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
+        )}
+      </Route>
+      <Route path="/settings">
+        {token ? (
+          <Layout><Settings /></Layout>
         ) : (
           <Redirect to={`/login?redirect=${encodeURIComponent(location)}`} />
         )}

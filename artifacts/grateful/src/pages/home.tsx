@@ -10,6 +10,7 @@ import {
   useUpdateEntry,
   useUploadEntryPhoto,
   useGetOnThisDay,
+  useGenerateQuote,
   getListEntriesQueryKey,
   getGetStreakQueryKey,
   getGetEntryByDateQueryKey,
@@ -17,6 +18,7 @@ import {
   getGetOnThisDayQueryKey,
 } from "@workspace/api-client-react";
 import { MoodPill, MOODS, type MoodKey } from "@/components/mood-pill";
+import { TraditionQuote } from "@/components/tradition-quote";
 import { Pencil, Check, X, ImageIcon } from "lucide-react";
 
 const TODAY = new Date().toISOString().split("T")[0];
@@ -60,6 +62,8 @@ export function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [showAffirmation, setShowAffirmation] = useState(false);
   const [affirmation, setAffirmation] = useState("");
+  const [quote, setQuote] = useState<{ quote: string; source: string; connection: string } | null>(null);
+  const [quoteLoading, setQuoteLoading] = useState(false);
   const MAX_CATEGORIES = 4;
   const photoInputRef = useRef<HTMLInputElement>(null);
 
@@ -75,6 +79,7 @@ export function Home() {
   const createEntry = useCreateEntry();
   const updateEntry = useUpdateEntry();
   const uploadPhoto = useUploadEntryPhoto();
+  const generateQuote = useGenerateQuote();
   const hasEntry = !!todayEntry;
 
   useEffect(() => {
@@ -125,30 +130,39 @@ export function Home() {
       }
     }
 
+    async function fetchQuote() {
+      setQuoteLoading(true);
+      try {
+        const q = await generateQuote.mutateAsync({ date: TODAY });
+        setQuote(q);
+      } catch {
+        setQuote(null);
+      } finally {
+        setQuoteLoading(false);
+      }
+    }
+
+    const onSaved = async () => {
+      await doPhotoUpload();
+      invalidateAll();
+      setShowAffirmation(true);
+      fetchQuote();
+      setTimeout(() => {
+        setShowAffirmation(false);
+        setQuote(null);
+        navigate("/journal");
+      }, 5000);
+    };
+
     if (hasEntry && isEditing) {
       updateEntry.mutate(
         { date: TODAY, data: { gratitudeItems, reflection, mood: mood ?? null, categories: selectedCategories } },
-        {
-          onSuccess: async () => {
-            await doPhotoUpload();
-            invalidateAll();
-            setIsEditing(false);
-            setShowAffirmation(true);
-            setTimeout(() => { setShowAffirmation(false); navigate("/journal"); }, 2800);
-          },
-        }
+        { onSuccess: async () => { await onSaved(); setIsEditing(false); } }
       );
     } else {
       createEntry.mutate(
         { data: { date: TODAY, gratitudeItems, reflection, mood: mood ?? null, categories: selectedCategories } },
-        {
-          onSuccess: async () => {
-            await doPhotoUpload();
-            invalidateAll();
-            setShowAffirmation(true);
-            setTimeout(() => { setShowAffirmation(false); navigate("/journal"); }, 2800);
-          },
-        }
+        { onSuccess: onSaved }
       );
     }
   }
@@ -174,15 +188,36 @@ export function Home() {
           <motion.div
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
-            className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm overflow-y-auto"
           >
             <motion.div
               initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.15, duration: 0.6 }}
-              className="text-center px-8 max-w-sm"
+              className="text-center px-8 max-w-sm w-full flex flex-col gap-6 py-12"
             >
-              <div className="text-5xl mb-6">✨</div>
-              <p className="font-serif text-2xl text-foreground leading-relaxed">{affirmation}</p>
+              <div>
+                <div className="text-5xl mb-6">✨</div>
+                <p className="font-serif text-2xl text-foreground leading-relaxed">{affirmation}</p>
+              </div>
+
+              {quoteLoading && (
+                <motion.div
+                  initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  className="flex flex-col items-center gap-2 mt-2"
+                >
+                  <div className="w-px h-8 bg-border" />
+                  <div className="w-5 h-5 rounded-full border-2 border-primary/40 border-t-primary animate-spin" />
+                  <p className="text-xs text-muted-foreground/50">Finding a quote for you…</p>
+                </motion.div>
+              )}
+
+              {quote && !quoteLoading && (
+                <TraditionQuote
+                  quote={quote.quote}
+                  source={quote.source}
+                  connection={quote.connection}
+                />
+              )}
             </motion.div>
           </motion.div>
         )}

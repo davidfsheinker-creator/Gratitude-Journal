@@ -253,6 +253,40 @@ export const UploadEntryPhotoResponse = zod.object({
 
 
 /**
+ * @summary Get user settings
+ */
+export const GetSettingsResponse = zod.object({
+  "tradition": zod.string()
+})
+
+
+/**
+ * @summary Update user settings
+ */
+export const UpdateSettingsBody = zod.object({
+  "tradition": zod.string()
+})
+
+export const UpdateSettingsResponse = zod.object({
+  "tradition": zod.string()
+})
+
+
+/**
+ * @summary Generate a tradition-based quote for a journal entry
+ */
+export const GenerateQuoteParams = zod.object({
+  "date": zod.coerce.string()
+})
+
+export const GenerateQuoteResponse = zod.object({
+  "quote": zod.string(),
+  "source": zod.string(),
+  "connection": zod.string()
+})
+
+
+/**
  * @summary Get current journaling streak
  */
 export const GetStreakResponse = zod.object({
