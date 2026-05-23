@@ -78,8 +78,10 @@ router.post("/auth/login", async (req, res) => {
   });
 });
 
-router.get("/auth/me", requireAuth, (req, res) => {
-  res.json({ id: req.userId, email: req.userEmail });
+router.get("/auth/me", requireAuth, async (req, res) => {
+  const [user] = await db.select().from(usersTable).where(eq(usersTable.id, req.userId)).limit(1);
+  if (!user) { res.status(401).json({ error: "User not found" }); return; }
+  res.json({ id: user.id, email: user.email, createdAt: user.createdAt.toISOString() });
 });
 
 export default router;

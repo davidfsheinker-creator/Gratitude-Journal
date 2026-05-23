@@ -168,6 +168,15 @@ export function Journal() {
                         </li>
                       ))}
                     </ul>
+                    {entry.photoPath && (
+                      <div className="mt-2.5 pt-2.5 border-t border-border/40">
+                        <img
+                          src={entry.photoPath}
+                          alt="Entry photo"
+                          className="w-full h-24 object-cover rounded-xl"
+                        />
+                      </div>
+                    )}
                     {entry.reflection && (
                       <p className="text-muted-foreground/60 text-xs mt-2.5 pt-2.5 border-t border-border/40 line-clamp-2 leading-relaxed italic">
                         {entry.reflection}
