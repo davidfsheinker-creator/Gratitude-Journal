@@ -1,9 +1,26 @@
 import { Link, useLocation } from "wouter";
 import { ThemeToggle } from "./theme-toggle";
-import { BookOpen, Calendar, PenLine } from "lucide-react";
+import { BookOpen, CalendarDays, PenLine, Star, LayoutGrid, LogOut } from "lucide-react";
+import { useAuth } from "@/lib/auth-context";
+import { useQueryClient } from "@tanstack/react-query";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
+  const { logout, user } = useAuth();
+  const queryClient = useQueryClient();
+
+  function handleLogout() {
+    queryClient.clear();
+    logout();
+  }
+
+  const navItems = [
+    { href: "/", icon: PenLine, label: "Today", active: location === "/" },
+    { href: "/journal", icon: BookOpen, label: "Journal", active: location.startsWith("/journal") },
+    { href: "/favorites", icon: Star, label: "Favorites", active: location === "/favorites" },
+    { href: "/week", icon: LayoutGrid, label: "Week", active: location === "/week" },
+    { href: "/calendar", icon: CalendarDays, label: "Calendar", active: location === "/calendar" },
+  ];
 
   return (
     <div className="min-h-[100dvh] flex flex-col selection:bg-primary/20">
@@ -12,24 +29,30 @@ export function Layout({ children }: { children: React.ReactNode }) {
           <Link href="/" className="flex items-center gap-2 text-primary">
             <span className="font-serif text-2xl font-semibold tracking-tight">Grateful</span>
           </Link>
-          <nav className="flex items-center gap-1 sm:gap-2">
-            <Link href="/">
-              <div className={`p-2 rounded-full transition-colors flex items-center justify-center ${location === "/" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}>
-                <PenLine className="w-5 h-5" />
-              </div>
-            </Link>
-            <Link href="/journal">
-              <div className={`p-2 rounded-full transition-colors flex items-center justify-center ${location.startsWith("/journal") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}>
-                <BookOpen className="w-5 h-5" />
-              </div>
-            </Link>
-            <Link href="/week">
-              <div className={`p-2 rounded-full transition-colors flex items-center justify-center ${location === "/week" ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"}`}>
-                <Calendar className="w-5 h-5" />
-              </div>
-            </Link>
+          <nav className="flex items-center gap-1">
+            {navItems.map(({ href, icon: Icon, label, active }) => (
+              <Link key={href} href={href}>
+                <div
+                  title={label}
+                  className={`p-2 rounded-full transition-colors flex items-center justify-center ${
+                    active ? "bg-primary/10 text-primary" : "text-muted-foreground hover:bg-muted"
+                  }`}
+                >
+                  <Icon className="w-5 h-5" />
+                </div>
+              </Link>
+            ))}
             <div className="w-px h-6 bg-border mx-1" />
             <ThemeToggle />
+            {user && (
+              <button
+                onClick={handleLogout}
+                title={`Sign out (${user.email})`}
+                className="p-2 rounded-full transition-colors text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <LogOut className="w-5 h-5" />
+              </button>
+            )}
           </nav>
         </div>
       </header>

@@ -1,20 +1,19 @@
-import { pgTable, serial, text, timestamp } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
-import { z } from "zod/v4";
+import { pgTable, serial, text, timestamp, integer, boolean, unique } from "drizzle-orm/pg-core";
+import { usersTable } from "./users";
 
 export const entriesTable = pgTable("entries", {
   id: serial("id").primaryKey(),
-  date: text("date").notNull().unique(),
+  userId: integer("user_id").notNull().references(() => usersTable.id, { onDelete: "cascade" }),
+  date: text("date").notNull(),
   gratitudeItems: text("gratitude_items").notNull(),
   reflection: text("reflection").notNull().default(""),
   mood: text("mood"),
+  starred: boolean("starred").notNull().default(false),
+  categories: text("categories").notNull().default("[]"),
+  photoPath: text("photo_path"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+}, (t) => [
+  unique("entries_user_date_unique").on(t.userId, t.date),
+]);
 
-export const insertEntrySchema = createInsertSchema(entriesTable).omit({
-  id: true,
-  createdAt: true,
-});
-
-export type InsertEntry = z.infer<typeof insertEntrySchema>;
 export type Entry = typeof entriesTable.$inferSelect;

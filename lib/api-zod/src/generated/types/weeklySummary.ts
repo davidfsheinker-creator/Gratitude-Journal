@@ -3,9 +3,10 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { Entry } from './entry';
+import type { WeeklySummaryCategoryBreakdown } from './weeklySummaryCategoryBreakdown';
 import type { WeeklySummaryMoodBreakdown } from './weeklySummaryMoodBreakdown';
 
 export interface WeeklySummary {
@@ -15,4 +16,5 @@ export interface WeeklySummary {
   totalEntries: number;
   moodBreakdown: WeeklySummaryMoodBreakdown;
   allGratitudeItems: string[];
+  categoryBreakdown: WeeklySummaryCategoryBreakdown;
 }

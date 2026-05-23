@@ -1,15 +1,24 @@
 import { Router } from "express";
+import path from "path";
+import fs from "fs";
+import multer from "multer";
 import { db, entriesTable } from "@workspace/db";
 import { eq, desc, gte, lte, and } from "drizzle-orm";
-import {
-  CreateEntryBody,
-  UpdateEntryBody,
-  GetEntryByDateParams,
-  UpdateEntryParams,
-  GetWeeklySummaryParams,
-} from "@workspace/api-zod";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
+
+const UPLOADS_DIR = path.join(process.cwd(), "uploads");
+if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
+  filename: (_req, file, cb) => {
+    const ext = path.extname(file.originalname);
+    cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
+  },
+});
+const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
 
 function parseEntry(row: typeof entriesTable.$inferSelect) {
   return {
@@ -18,31 +27,34 @@ function parseEntry(row: typeof entriesTable.$inferSelect) {
     gratitudeItems: JSON.parse(row.gratitudeItems) as string[],
     reflection: row.reflection,
     mood: row.mood,
+    starred: row.starred,
+    categories: (() => { try { return JSON.parse(row.categories); } catch { return []; } })(),
+    photoPath: row.photoPath ?? null,
     createdAt: row.createdAt.toISOString(),
   };
 }
 
-router.get("/entries", async (_req, res) => {
+router.get("/entries", requireAuth, async (req, res) => {
   const rows = await db
     .select()
     .from(entriesTable)
+    .where(eq(entriesTable.userId, req.userId))
     .orderBy(desc(entriesTable.date));
   res.json(rows.map(parseEntry));
 });
 
-router.post("/entries", async (req, res) => {
-  const parsed = CreateEntryBody.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
+router.post("/entries", requireAuth, async (req, res) => {
+  const { date, gratitudeItems, reflection, mood, categories } = req.body;
+
+  if (!date || !Array.isArray(gratitudeItems) || gratitudeItems.length === 0) {
+    res.status(400).json({ error: "date and at least one gratitude item are required" });
     return;
   }
-
-  const { date, gratitudeItems, reflection, mood } = parsed.data;
 
   const existing = await db
     .select()
     .from(entriesTable)
-    .where(eq(entriesTable.date, date))
+    .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
     .limit(1);
 
   if (existing.length > 0) {
@@ -53,28 +65,67 @@ router.post("/entries", async (req, res) => {
   const [row] = await db
     .insert(entriesTable)
     .values({
+      userId: req.userId,
       date,
       gratitudeItems: JSON.stringify(gratitudeItems),
       reflection: reflection ?? "",
       mood: mood ?? null,
+      categories: JSON.stringify(Array.isArray(categories) ? categories : []),
+      starred: false,
     })
     .returning();
 
   res.status(201).json(parseEntry(row));
 });
 
-router.get("/entries/week/:startDate", async (req, res) => {
-  const parsed = GetWeeklySummaryParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid date" });
-    return;
+router.get("/entries/favorites", requireAuth, async (req, res) => {
+  const rows = await db
+    .select()
+    .from(entriesTable)
+    .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.starred, true)))
+    .orderBy(desc(entriesTable.date));
+  res.json(rows.map(parseEntry));
+});
+
+router.get("/entries/onthisday", requireAuth, async (req, res) => {
+  const today = new Date();
+
+  const oneWeekAgoDate = new Date(today);
+  oneWeekAgoDate.setDate(oneWeekAgoDate.getDate() - 7);
+
+  const oneMonthAgoDate = new Date(today);
+  oneMonthAgoDate.setMonth(oneMonthAgoDate.getMonth() - 1);
+
+  const oneYearAgoDate = new Date(today);
+  oneYearAgoDate.setFullYear(oneYearAgoDate.getFullYear() - 1);
+
+  const toDate = (d: Date) => d.toISOString().split("T")[0];
+
+  async function findEntry(date: string) {
+    const [row] = await db
+      .select()
+      .from(entriesTable)
+      .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
+      .limit(1);
+    return row ? parseEntry(row) : null;
   }
 
-  const { startDate } = parsed.data;
+  const [oneWeekAgo, oneMonthAgo, oneYearAgo] = await Promise.all([
+    findEntry(toDate(oneWeekAgoDate)),
+    findEntry(toDate(oneMonthAgoDate)),
+    findEntry(toDate(oneYearAgoDate)),
+  ]);
+
+  res.json({ oneWeekAgo, oneMonthAgo, oneYearAgo });
+});
+
+router.get("/entries/week/:startDate", requireAuth, async (req, res) => {
+  const { startDate } = req.params;
+  if (!startDate) { res.status(400).json({ error: "Invalid date" }); return; }
+
   const start = new Date(startDate);
   const end = new Date(start);
   end.setDate(end.getDate() + 6);
-
   const endDate = end.toISOString().split("T")[0];
 
   const rows = await db
@@ -82,16 +133,17 @@ router.get("/entries/week/:startDate", async (req, res) => {
     .from(entriesTable)
     .where(
       and(
+        eq(entriesTable.userId, req.userId),
         gte(entriesTable.date, startDate),
-        lte(entriesTable.date, endDate)
+        lte(entriesTable.date, endDate),
       )
     )
     .orderBy(desc(entriesTable.date));
 
   const entries = rows.map(parseEntry);
-
   const moodBreakdown = { great: 0, okay: 0, tough: 0, untagged: 0 };
   const allGratitudeItems: string[] = [];
+  const categoryBreakdown: Record<string, number> = {};
 
   for (const e of entries) {
     if (e.mood === "great") moodBreakdown.great++;
@@ -100,79 +152,63 @@ router.get("/entries/week/:startDate", async (req, res) => {
     else moodBreakdown.untagged++;
 
     allGratitudeItems.push(...e.gratitudeItems);
+
+    for (const cat of e.categories as string[]) {
+      categoryBreakdown[cat] = (categoryBreakdown[cat] ?? 0) + 1;
+    }
   }
 
-  res.json({
-    startDate,
-    endDate,
-    entries,
-    totalEntries: entries.length,
-    moodBreakdown,
-    allGratitudeItems,
-  });
+  res.json({ startDate, endDate, entries, totalEntries: entries.length, moodBreakdown, allGratitudeItems, categoryBreakdown });
 });
 
-router.get("/entries/:date", async (req, res) => {
-  const parsed = GetEntryByDateParams.safeParse(req.params);
-  if (!parsed.success) {
-    res.status(400).json({ error: "Invalid date" });
-    return;
-  }
-
-  const { date } = parsed.data;
+router.get("/entries/:date", requireAuth, async (req, res) => {
+  const { date } = req.params;
   const [row] = await db
     .select()
     .from(entriesTable)
-    .where(eq(entriesTable.date, date))
+    .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
     .limit(1);
 
-  if (!row) {
-    res.status(404).json({ error: "Entry not found" });
-    return;
-  }
-
+  if (!row) { res.status(404).json({ error: "Entry not found" }); return; }
   res.json(parseEntry(row));
 });
 
-router.put("/entries/:date", async (req, res) => {
-  const paramsParsed = UpdateEntryParams.safeParse(req.params);
-  if (!paramsParsed.success) {
-    res.status(400).json({ error: "Invalid date" });
-    return;
-  }
-
-  const bodyParsed = UpdateEntryBody.safeParse(req.body);
-  if (!bodyParsed.success) {
-    res.status(400).json({ error: "Invalid request body" });
-    return;
-  }
-
-  const { date } = paramsParsed.data;
-  const { gratitudeItems, reflection, mood } = bodyParsed.data;
+router.put("/entries/:date", requireAuth, async (req, res) => {
+  const { date } = req.params;
+  const { gratitudeItems, reflection, mood, starred, categories } = req.body;
 
   const updateData: Partial<typeof entriesTable.$inferInsert> = {};
-  if (gratitudeItems !== undefined) {
-    updateData.gratitudeItems = JSON.stringify(gratitudeItems);
-  }
-  if (reflection !== undefined) {
-    updateData.reflection = reflection;
-  }
-  if (mood !== undefined) {
-    updateData.mood = mood ?? null;
-  }
+  if (gratitudeItems !== undefined) updateData.gratitudeItems = JSON.stringify(gratitudeItems);
+  if (reflection !== undefined) updateData.reflection = reflection;
+  if (mood !== undefined) updateData.mood = mood ?? null;
+  if (starred !== undefined) updateData.starred = starred;
+  if (categories !== undefined) updateData.categories = JSON.stringify(categories);
 
   const [row] = await db
     .update(entriesTable)
     .set(updateData)
-    .where(eq(entriesTable.date, date))
+    .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
     .returning();
 
-  if (!row) {
-    res.status(404).json({ error: "Entry not found" });
-    return;
-  }
-
+  if (!row) { res.status(404).json({ error: "Entry not found" }); return; }
   res.json(parseEntry(row));
+});
+
+router.post("/entries/:date/photo", requireAuth, upload.single("photo"), async (req, res) => {
+  const { date } = req.params;
+
+  if (!req.file) { res.status(400).json({ error: "No photo uploaded" }); return; }
+
+  const photoPath = `/uploads/${req.file.filename}`;
+
+  const [row] = await db
+    .update(entriesTable)
+    .set({ photoPath })
+    .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
+    .returning();
+
+  if (!row) { res.status(404).json({ error: "Entry not found" }); return; }
+  res.json({ photoPath });
 });
 
 export default router;

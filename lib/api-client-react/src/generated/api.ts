@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import {
   useMutation,
@@ -20,13 +20,17 @@ import type {
 } from '@tanstack/react-query';
 
 import type {
+  AuthInput,
+  AuthResponse,
   DailyPrompt,
   Entry,
   EntryInput,
   EntryUpdate,
   ErrorResponse,
   HealthStatus,
+  OnThisDay,
   Streak,
+  User,
   WeeklySummary
 } from './api.schemas';
 
@@ -51,7 +55,6 @@ export const getHealthCheckUrl = () => {
 }
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const healthCheck = async ( options?: RequestInit): Promise<HealthStatus> => {
@@ -120,6 +123,225 @@ export function useHealthCheck<TData = Awaited<ReturnType<typeof healthCheck>>, 
 
 
 
+export const getSignupUrl = () => {
+
+
+
+
+  return `/api/auth/signup`
+}
+
+/**
+ * @summary Create a new account
+ */
+export const signup = async (authInput: AuthInput, options?: RequestInit): Promise<AuthResponse> => {
+
+  return customFetch<AuthResponse>(getSignupUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      authInput,)
+  }
+);}
+
+
+
+
+export const getSignupMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signup>>, TError,{data: BodyType<AuthInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof signup>>, TError,{data: BodyType<AuthInput>}, TContext> => {
+
+const mutationKey = ['signup'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof signup>>, {data: BodyType<AuthInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  signup(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type SignupMutationResult = NonNullable<Awaited<ReturnType<typeof signup>>>
+    export type SignupMutationBody = BodyType<AuthInput>
+    export type SignupMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Create a new account
+ */
+export const useSignup = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof signup>>, TError,{data: BodyType<AuthInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof signup>>,
+        TError,
+        {data: BodyType<AuthInput>},
+        TContext
+      > => {
+      return useMutation(getSignupMutationOptions(options));
+    }
+
+export const getLoginUrl = () => {
+
+
+
+
+  return `/api/auth/login`
+}
+
+/**
+ * @summary Log in to an existing account
+ */
+export const login = async (authInput: AuthInput, options?: RequestInit): Promise<AuthResponse> => {
+
+  return customFetch<AuthResponse>(getLoginUrl(),
+  {
+    ...options,
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...options?.headers },
+    body: JSON.stringify(
+      authInput,)
+  }
+);}
+
+
+
+
+export const getLoginMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<AuthInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<AuthInput>}, TContext> => {
+
+const mutationKey = ['login'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof login>>, {data: BodyType<AuthInput>}> = (props) => {
+          const {data} = props ?? {};
+
+          return  login(data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type LoginMutationResult = NonNullable<Awaited<ReturnType<typeof login>>>
+    export type LoginMutationBody = BodyType<AuthInput>
+    export type LoginMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Log in to an existing account
+ */
+export const useLogin = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof login>>, TError,{data: BodyType<AuthInput>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof login>>,
+        TError,
+        {data: BodyType<AuthInput>},
+        TContext
+      > => {
+      return useMutation(getLoginMutationOptions(options));
+    }
+
+export const getGetMeUrl = () => {
+
+
+
+
+  return `/api/auth/me`
+}
+
+/**
+ * @summary Get current user
+ */
+export const getMe = async ( options?: RequestInit): Promise<User> => {
+
+  return customFetch<User>(getGetMeUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetMeQueryKey = () => {
+    return [
+    `/api/auth/me`
+    ] as const;
+    }
+
+
+export const getGetMeQueryOptions = <TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<ErrorResponse>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetMeQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getMe>>> = ({ signal }) => getMe({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetMeQueryResult = NonNullable<Awaited<ReturnType<typeof getMe>>>
+export type GetMeQueryError = ErrorType<ErrorResponse>
+
+
+/**
+ * @summary Get current user
+ */
+
+export function useGetMe<TData = Awaited<ReturnType<typeof getMe>>, TError = ErrorType<ErrorResponse>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getMe>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetMeQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
 export const getListEntriesUrl = () => {
 
 
@@ -129,7 +351,6 @@ export const getListEntriesUrl = () => {
 }
 
 /**
- * Returns all journal entries ordered by date descending
  * @summary List all journal entries
  */
 export const listEntries = async ( options?: RequestInit): Promise<Entry[]> => {
@@ -268,6 +489,237 @@ export const useCreateEntry = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getCreateEntryMutationOptions(options));
     }
+
+export const getGetFavoritesUrl = () => {
+
+
+
+
+  return `/api/entries/favorites`
+}
+
+/**
+ * @summary Get all starred/favorite entries
+ */
+export const getFavorites = async ( options?: RequestInit): Promise<Entry[]> => {
+
+  return customFetch<Entry[]>(getGetFavoritesUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetFavoritesQueryKey = () => {
+    return [
+    `/api/entries/favorites`
+    ] as const;
+    }
+
+
+export const getGetFavoritesQueryOptions = <TData = Awaited<ReturnType<typeof getFavorites>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFavorites>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetFavoritesQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getFavorites>>> = ({ signal }) => getFavorites({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getFavorites>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetFavoritesQueryResult = NonNullable<Awaited<ReturnType<typeof getFavorites>>>
+export type GetFavoritesQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get all starred/favorite entries
+ */
+
+export function useGetFavorites<TData = Awaited<ReturnType<typeof getFavorites>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getFavorites>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetFavoritesQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetOnThisDayUrl = () => {
+
+
+
+
+  return `/api/entries/onthisday`
+}
+
+/**
+ * @summary Get entries from 1 week, 1 month, and 1 year ago
+ */
+export const getOnThisDay = async ( options?: RequestInit): Promise<OnThisDay> => {
+
+  return customFetch<OnThisDay>(getGetOnThisDayUrl(),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetOnThisDayQueryKey = () => {
+    return [
+    `/api/entries/onthisday`
+    ] as const;
+    }
+
+
+export const getGetOnThisDayQueryOptions = <TData = Awaited<ReturnType<typeof getOnThisDay>>, TError = ErrorType<unknown>>( options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOnThisDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetOnThisDayQueryKey();
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getOnThisDay>>> = ({ signal }) => getOnThisDay({ signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getOnThisDay>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetOnThisDayQueryResult = NonNullable<Awaited<ReturnType<typeof getOnThisDay>>>
+export type GetOnThisDayQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get entries from 1 week, 1 month, and 1 year ago
+ */
+
+export function useGetOnThisDay<TData = Awaited<ReturnType<typeof getOnThisDay>>, TError = ErrorType<unknown>>(
+  options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getOnThisDay>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetOnThisDayQueryOptions(options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
+
+export const getGetWeeklySummaryUrl = (startDate: string,) => {
+
+
+
+
+  return `/api/entries/week/${startDate}`
+}
+
+/**
+ * @summary Get weekly summary starting from a given date
+ */
+export const getWeeklySummary = async (startDate: string, options?: RequestInit): Promise<WeeklySummary> => {
+
+  return customFetch<WeeklySummary>(getGetWeeklySummaryUrl(startDate),
+  {
+    ...options,
+    method: 'GET'
+
+
+  }
+);}
+
+
+
+
+
+export const getGetWeeklySummaryQueryKey = (startDate: string,) => {
+    return [
+    `/api/entries/week/${startDate}`
+    ] as const;
+    }
+
+
+export const getGetWeeklySummaryQueryOptions = <TData = Awaited<ReturnType<typeof getWeeklySummary>>, TError = ErrorType<unknown>>(startDate: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklySummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+) => {
+
+const {query: queryOptions, request: requestOptions} = options ?? {};
+
+  const queryKey =  queryOptions?.queryKey ?? getGetWeeklySummaryQueryKey(startDate);
+
+
+
+    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeeklySummary>>> = ({ signal }) => getWeeklySummary(startDate, { signal, ...requestOptions });
+
+
+
+
+
+   return  { queryKey, queryFn, enabled: !!(startDate), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWeeklySummary>>, TError, TData> & { queryKey: QueryKey }
+}
+
+export type GetWeeklySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getWeeklySummary>>>
+export type GetWeeklySummaryQueryError = ErrorType<unknown>
+
+
+/**
+ * @summary Get weekly summary starting from a given date
+ */
+
+export function useGetWeeklySummary<TData = Awaited<ReturnType<typeof getWeeklySummary>>, TError = ErrorType<unknown>>(
+ startDate: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklySummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
+
+ ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
+
+  const queryOptions = getGetWeeklySummaryQueryOptions(startDate,options)
+
+  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
+
+  return { ...query, queryKey: queryOptions.queryKey };
+}
+
+
+
+
+
+
 
 export const getGetEntryByDateUrl = (date: string,) => {
 
@@ -417,83 +869,6 @@ export const useUpdateEntry = <TError = ErrorType<ErrorResponse>,
       > => {
       return useMutation(getUpdateEntryMutationOptions(options));
     }
-
-export const getGetWeeklySummaryUrl = (startDate: string,) => {
-
-
-
-
-  return `/api/entries/week/${startDate}`
-}
-
-/**
- * @summary Get weekly summary starting from a given date
- */
-export const getWeeklySummary = async (startDate: string, options?: RequestInit): Promise<WeeklySummary> => {
-
-  return customFetch<WeeklySummary>(getGetWeeklySummaryUrl(startDate),
-  {
-    ...options,
-    method: 'GET'
-
-
-  }
-);}
-
-
-
-
-
-export const getGetWeeklySummaryQueryKey = (startDate: string,) => {
-    return [
-    `/api/entries/week/${startDate}`
-    ] as const;
-    }
-
-
-export const getGetWeeklySummaryQueryOptions = <TData = Awaited<ReturnType<typeof getWeeklySummary>>, TError = ErrorType<unknown>>(startDate: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklySummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-) => {
-
-const {query: queryOptions, request: requestOptions} = options ?? {};
-
-  const queryKey =  queryOptions?.queryKey ?? getGetWeeklySummaryQueryKey(startDate);
-
-
-
-    const queryFn: QueryFunction<Awaited<ReturnType<typeof getWeeklySummary>>> = ({ signal }) => getWeeklySummary(startDate, { signal, ...requestOptions });
-
-
-
-
-
-   return  { queryKey, queryFn, enabled: !!(startDate), ...queryOptions} as UseQueryOptions<Awaited<ReturnType<typeof getWeeklySummary>>, TError, TData> & { queryKey: QueryKey }
-}
-
-export type GetWeeklySummaryQueryResult = NonNullable<Awaited<ReturnType<typeof getWeeklySummary>>>
-export type GetWeeklySummaryQueryError = ErrorType<unknown>
-
-
-/**
- * @summary Get weekly summary starting from a given date
- */
-
-export function useGetWeeklySummary<TData = Awaited<ReturnType<typeof getWeeklySummary>>, TError = ErrorType<unknown>>(
- startDate: string, options?: { query?:UseQueryOptions<Awaited<ReturnType<typeof getWeeklySummary>>, TError, TData>, request?: SecondParameter<typeof customFetch>}
-
- ):  UseQueryResult<TData, TError> & { queryKey: QueryKey } {
-
-  const queryOptions = getGetWeeklySummaryQueryOptions(startDate,options)
-
-  const query = useQuery(queryOptions) as  UseQueryResult<TData, TError> & { queryKey: QueryKey };
-
-  return { ...query, queryKey: queryOptions.queryKey };
-}
-
-
-
-
-
-
 
 export const getGetStreakUrl = () => {
 

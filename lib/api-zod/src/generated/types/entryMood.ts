@@ -3,11 +3,10 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
 /**
- * Mood tag
  * @nullable
  */
 export type EntryMood = typeof EntryMood[keyof typeof EntryMood] | null;

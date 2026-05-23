@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { EntryUpdateMood } from './entryUpdateMood';
 
@@ -16,4 +16,6 @@ export interface EntryUpdate {
   reflection?: string;
   /** @nullable */
   mood?: EntryUpdateMood;
+  starred?: boolean;
+  categories?: string[];
 }

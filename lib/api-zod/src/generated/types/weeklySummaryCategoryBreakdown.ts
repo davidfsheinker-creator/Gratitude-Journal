@@ -6,8 +6,4 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface Streak {
-  currentStreak: number;
-  longestStreak: number;
-  todayLogged: boolean;
-}
+export type WeeklySummaryCategoryBreakdown = {[key: string]: number};

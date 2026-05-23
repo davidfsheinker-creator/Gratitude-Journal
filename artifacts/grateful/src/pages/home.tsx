@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useLocation } from "wouter";
@@ -8,12 +8,15 @@ import {
   useGetEntryByDate,
   useCreateEntry,
   useUpdateEntry,
+  useGetOnThisDay,
   getListEntriesQueryKey,
   getGetStreakQueryKey,
   getGetEntryByDateQueryKey,
+  getGetFavoritesQueryKey,
+  getGetOnThisDayQueryKey,
 } from "@workspace/api-client-react";
 import { MoodPill, MOODS, type MoodKey } from "@/components/mood-pill";
-import { Flame, Pencil, Check, X } from "lucide-react";
+import { Pencil, Check, X, ImageIcon } from "lucide-react";
 
 const TODAY = new Date().toISOString().split("T")[0];
 
@@ -27,13 +30,20 @@ const AFFIRMATIONS = [
   "Every entry is a gift to your future self.",
 ];
 
-function StreakBadge({ streak }: { streak: number; todayLogged: boolean }) {
-  return (
-    <div className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
-      <span className="text-lg">🔥</span>
-      <span>{streak} day{streak !== 1 ? "s" : ""}</span>
-    </div>
-  );
+const CATEGORIES = ["Family", "Health", "Work", "Nature", "Simple Pleasures", "Growth", "Relationships", "Other"];
+
+function formatRelativeDate(dateStr: string) {
+  const today = new Date();
+  const [y, m, d] = dateStr.split("-").map(Number);
+  const target = new Date(y, m - 1, d);
+  const diffMs = today.getTime() - target.getTime();
+  const diffDays = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  if (diffDays === 7) return "One week ago";
+  if (diffDays >= 28 && diffDays <= 32) return "One month ago";
+  if (diffDays >= 363 && diffDays <= 367) return "One year ago";
+  const options: Intl.DateTimeFormatOptions = { month: "long", day: "numeric" };
+  if (target.getFullYear() !== today.getFullYear()) options.year = "numeric";
+  return target.toLocaleDateString("en-US", options);
 }
 
 export function Home() {
@@ -43,33 +53,64 @@ export function Home() {
   const [items, setItems] = useState(["", "", ""]);
   const [reflection, setReflection] = useState("");
   const [mood, setMood] = useState<MoodKey | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const [photoFile, setPhotoFile] = useState<File | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [showAffirmation, setShowAffirmation] = useState(false);
   const [affirmation, setAffirmation] = useState("");
+  const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: prompt } = useGetDailyPrompt();
   const { data: streak } = useGetStreak();
+  const { data: onThisDay } = useGetOnThisDay({
+    query: { queryKey: getGetOnThisDayQueryKey() }
+  });
   const { data: todayEntry, isLoading: entryLoading } = useGetEntryByDate(TODAY, {
-    query: {
-      queryKey: getGetEntryByDateQueryKey(TODAY),
-      retry: false,
-    },
+    query: { queryKey: getGetEntryByDateQueryKey(TODAY), retry: false },
   });
 
   const createEntry = useCreateEntry();
   const updateEntry = useUpdateEntry();
-
   const hasEntry = !!todayEntry;
 
   useEffect(() => {
     if (todayEntry && !isEditing) {
-      setItems([...(todayEntry.gratitudeItems ?? [""]), "", ""].slice(0, 3));
+      const gi = todayEntry.gratitudeItems ?? [];
+      setItems([gi[0] ?? "", gi[1] ?? "", gi[2] ?? ""]);
       setReflection(todayEntry.reflection ?? "");
       setMood((todayEntry.mood as MoodKey) ?? null);
+      setSelectedCategories((todayEntry.categories as string[]) ?? []);
     }
   }, [todayEntry, isEditing]);
 
-  function handleSubmit(e: React.FormEvent) {
+  function handlePhotoChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setPhotoFile(file);
+    const url = URL.createObjectURL(file);
+    setPhotoPreview(url);
+  }
+
+  function toggleCategory(cat: string) {
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
+    );
+  }
+
+  async function uploadPhoto(date: string) {
+    if (!photoFile) return;
+    const token = localStorage.getItem("grateful_token");
+    const form = new FormData();
+    form.append("photo", photoFile);
+    await fetch(`/api/entries/${date}/photo`, {
+      method: "POST",
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+      body: form,
+    });
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const gratitudeItems = items.filter((i) => i.trim() !== "");
     if (gratitudeItems.length === 0) return;
@@ -77,46 +118,47 @@ export function Home() {
     const affirmText = AFFIRMATIONS[Math.floor(Math.random() * AFFIRMATIONS.length)];
     setAffirmation(affirmText);
 
+    const invalidateAll = () => {
+      queryClient.invalidateQueries({ queryKey: getGetEntryByDateQueryKey(TODAY) });
+      queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetStreakQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
+      queryClient.invalidateQueries({ queryKey: getGetOnThisDayQueryKey() });
+    };
+
     if (hasEntry && isEditing) {
       updateEntry.mutate(
+        { date: TODAY, data: { gratitudeItems, reflection, mood: mood ?? null, categories: selectedCategories } },
         {
-          date: TODAY,
-          data: { gratitudeItems, reflection, mood: mood ?? null },
-        },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getGetEntryByDateQueryKey(TODAY) });
-            queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getGetStreakQueryKey() });
+          onSuccess: async () => {
+            await uploadPhoto(TODAY);
+            invalidateAll();
             setIsEditing(false);
             setShowAffirmation(true);
-            setTimeout(() => {
-              setShowAffirmation(false);
-              navigate("/journal");
-            }, 2800);
+            setTimeout(() => { setShowAffirmation(false); navigate("/journal"); }, 2800);
           },
         }
       );
     } else {
       createEntry.mutate(
+        { data: { date: TODAY, gratitudeItems, reflection, mood: mood ?? null, categories: selectedCategories } },
         {
-          data: { date: TODAY, gratitudeItems, reflection, mood: mood ?? null },
-        },
-        {
-          onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getGetStreakQueryKey() });
-            queryClient.invalidateQueries({ queryKey: getGetEntryByDateQueryKey(TODAY) });
+          onSuccess: async () => {
+            await uploadPhoto(TODAY);
+            invalidateAll();
             setShowAffirmation(true);
-            setTimeout(() => {
-              setShowAffirmation(false);
-              navigate("/journal");
-            }, 2800);
+            setTimeout(() => { setShowAffirmation(false); navigate("/journal"); }, 2800);
           },
         }
       );
     }
   }
+
+  const onThisDayEntries = [
+    { label: "One week ago", entry: onThisDay?.oneWeekAgo },
+    { label: "One month ago", entry: onThisDay?.oneMonthAgo },
+    { label: "One year ago", entry: onThisDay?.oneYearAgo },
+  ].filter(({ entry }) => !!entry);
 
   if (entryLoading) {
     return (
@@ -131,15 +173,12 @@ export function Home() {
       <AnimatePresence>
         {showAffirmation && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.96 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.96 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             transition={{ duration: 0.5 }}
             className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm"
           >
             <motion.div
-              initial={{ y: 16, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
+              initial={{ y: 16, opacity: 0 }} animate={{ y: 0, opacity: 1 }}
               transition={{ delay: 0.15, duration: 0.6 }}
               className="text-center px-8 max-w-sm"
             >
@@ -161,11 +200,12 @@ export function Home() {
           </p>
         </div>
         {streak && (
-          <div className="flex flex-col items-end gap-1">
-            <StreakBadge streak={streak.currentStreak} todayLogged={streak.todayLogged} />
-            {streak.currentStreak > 0 && (
-              <p className="text-xs text-muted-foreground">streak</p>
-            )}
+          <div className="flex flex-col items-end gap-0.5">
+            <div className="flex items-center gap-1.5 text-sm font-medium text-amber-600 dark:text-amber-400">
+              <span className="text-lg">🔥</span>
+              <span>{streak.currentStreak} day{streak.currentStreak !== 1 ? "s" : ""}</span>
+            </div>
+            <p className="text-xs text-muted-foreground">streak</p>
           </div>
         )}
       </div>
@@ -173,8 +213,7 @@ export function Home() {
       {/* Daily Prompt */}
       {prompt && (
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
+          initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }}
           className="rounded-2xl bg-amber-50/80 dark:bg-amber-950/20 border border-amber-200/60 dark:border-amber-800/30 px-4 py-3"
         >
           <p className="text-xs uppercase tracking-widest text-amber-600/70 dark:text-amber-500/60 font-medium mb-1">Today's Prompt</p>
@@ -182,17 +221,18 @@ export function Home() {
         </motion.div>
       )}
 
-      {/* Read-only view when entry exists and not editing */}
+      {/* Read-only view */}
       {hasEntry && !isEditing ? (
-        <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col gap-4"
-        >
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-4">
           <div className="rounded-2xl bg-card border border-border/60 p-5 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Grateful for</p>
-              {todayEntry.mood && <MoodPill mood={todayEntry.mood} />}
+              <div className="flex items-center gap-2 flex-wrap">
+                {(todayEntry.categories as string[])?.map((cat) => (
+                  <span key={cat} className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground border border-border/50">{cat}</span>
+                ))}
+                {todayEntry.mood && <MoodPill mood={todayEntry.mood} />}
+              </div>
             </div>
             <ul className="flex flex-col gap-2">
               {todayEntry.gratitudeItems.map((item, i) => (
@@ -208,6 +248,13 @@ export function Home() {
                 <p className="text-foreground/80 leading-relaxed text-sm">{todayEntry.reflection}</p>
               </div>
             )}
+            {todayEntry.photoPath && (
+              <img
+                src={todayEntry.photoPath}
+                alt="Entry photo"
+                className="rounded-xl w-full object-cover max-h-48 mt-1"
+              />
+            )}
           </div>
           <button
             onClick={() => setIsEditing(true)}
@@ -219,12 +266,7 @@ export function Home() {
         </motion.div>
       ) : (
         /* Entry form */
-        <motion.form
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          onSubmit={handleSubmit}
-          className="flex flex-col gap-5"
-        >
+        <motion.form initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} onSubmit={handleSubmit} className="flex flex-col gap-5">
           {/* Gratitude Items */}
           <div className="rounded-2xl bg-card border border-border/60 p-5 flex flex-col gap-3">
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">I'm grateful for...</p>
@@ -234,18 +276,8 @@ export function Home() {
                 <input
                   type="text"
                   value={items[i]}
-                  onChange={(e) => {
-                    const next = [...items];
-                    next[i] = e.target.value;
-                    setItems(next);
-                  }}
-                  placeholder={
-                    i === 0
-                      ? "Something you noticed today..."
-                      : i === 1
-                      ? "Someone who showed up for you..."
-                      : "A small joy or comfort..."
-                  }
+                  onChange={(e) => { const n = [...items]; n[i] = e.target.value; setItems(n); }}
+                  placeholder={i === 0 ? "Something you noticed today..." : i === 1 ? "Someone who showed up for you..." : "A small joy or comfort..."}
                   required={i === 0}
                   className="flex-1 bg-transparent border-b border-border/60 focus:border-primary/60 py-1.5 text-sm text-foreground placeholder:text-muted-foreground/50 outline-none transition-colors"
                 />
@@ -274,21 +306,61 @@ export function Home() {
                 const selected = mood === key;
                 return (
                   <button
-                    key={key}
-                    type="button"
+                    key={key} type="button"
                     onClick={() => setMood(selected ? null : key)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${
-                      selected
-                        ? cfg.color + " ring-2 ring-offset-1 ring-primary/30"
-                        : "border-border text-muted-foreground hover:border-border/80"
-                    }`}
+                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm border transition-all ${selected ? cfg.color + " ring-2 ring-offset-1 ring-primary/30" : "border-border text-muted-foreground hover:border-border/80"}`}
                   >
-                    <span>{cfg.emoji}</span>
-                    <span>{cfg.label}</span>
+                    <span>{cfg.emoji}</span><span>{cfg.label}</span>
                   </button>
                 );
               })}
             </div>
+          </div>
+
+          {/* Categories */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Categories (optional)</p>
+            <div className="flex flex-wrap gap-2">
+              {CATEGORIES.map((cat) => {
+                const active = selectedCategories.includes(cat);
+                return (
+                  <button
+                    key={cat} type="button"
+                    onClick={() => toggleCategory(cat)}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${active ? "bg-secondary text-secondary-foreground border-secondary" : "border-border text-muted-foreground hover:border-border/80"}`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Photo */}
+          <div className="flex flex-col gap-2">
+            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Photo (optional)</p>
+            <input ref={photoInputRef} type="file" accept="image/*" onChange={handlePhotoChange} className="hidden" />
+            {photoPreview ? (
+              <div className="relative">
+                <img src={photoPreview} alt="Preview" className="rounded-xl w-full object-cover max-h-48" />
+                <button
+                  type="button"
+                  onClick={() => { setPhotoFile(null); setPhotoPreview(null); if (photoInputRef.current) photoInputRef.current.value = ""; }}
+                  className="absolute top-2 right-2 bg-background/80 rounded-full p-1 text-foreground hover:bg-background transition-colors"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => photoInputRef.current?.click()}
+                className="flex items-center gap-2 text-sm text-muted-foreground border border-dashed border-border rounded-xl px-4 py-3 hover:border-primary/40 hover:text-foreground transition-colors"
+              >
+                <ImageIcon className="w-4 h-4" />
+                Attach a photo
+              </button>
+            )}
           </div>
 
           {/* Actions */}
@@ -299,23 +371,41 @@ export function Home() {
               className="flex-1 flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-xl py-3 text-sm font-medium disabled:opacity-50 transition-opacity hover:opacity-90"
             >
               <Check className="w-4 h-4" />
-              {createEntry.isPending || updateEntry.isPending
-                ? "Saving..."
-                : isEditing
-                ? "Save changes"
-                : "Save entry"}
+              {createEntry.isPending || updateEntry.isPending ? "Saving..." : isEditing ? "Save changes" : "Save entry"}
             </button>
             {isEditing && (
-              <button
-                type="button"
-                onClick={() => setIsEditing(false)}
-                className="p-3 rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors"
-              >
+              <button type="button" onClick={() => setIsEditing(false)} className="p-3 rounded-xl border border-border text-muted-foreground hover:text-foreground transition-colors">
                 <X className="w-4 h-4" />
               </button>
             )}
           </div>
         </motion.form>
+      )}
+
+      {/* On This Day */}
+      {onThisDayEntries.length > 0 && (
+        <div className="flex flex-col gap-3">
+          <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">On This Day</p>
+          {onThisDayEntries.map(({ label, entry }) => {
+            if (!entry) return null;
+            return (
+              <motion.div
+                key={label}
+                initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}
+                className="rounded-2xl bg-amber-50/50 dark:bg-amber-950/10 border border-amber-200/40 dark:border-amber-800/20 p-4"
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs text-amber-600/70 dark:text-amber-500/60 font-medium">{label}</p>
+                  {entry.mood && <MoodPill mood={entry.mood} />}
+                </div>
+                <p className="text-sm text-foreground/80 line-clamp-2 leading-relaxed">
+                  {entry.gratitudeItems[0]}
+                  {entry.gratitudeItems[1] ? `, ${entry.gratitudeItems[1]}` : ""}
+                </p>
+              </motion.div>
+            );
+          })}
+        </div>
       )}
     </div>
   );

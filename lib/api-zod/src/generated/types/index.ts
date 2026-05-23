@@ -3,9 +3,11 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 
+export * from './authInput';
+export * from './authResponse';
 export * from './dailyPrompt';
 export * from './entry';
 export * from './entryInput';
@@ -15,6 +17,9 @@ export * from './entryUpdate';
 export * from './entryUpdateMood';
 export * from './errorResponse';
 export * from './healthStatus';
+export * from './onThisDay';
 export * from './streak';
+export * from './user';
 export * from './weeklySummary';
+export * from './weeklySummaryCategoryBreakdown';
 export * from './weeklySummaryMoodBreakdown';

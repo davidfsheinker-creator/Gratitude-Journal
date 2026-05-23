@@ -1,13 +1,15 @@
 import { Router } from "express";
 import { db, entriesTable } from "@workspace/db";
-import { desc } from "drizzle-orm";
+import { desc, eq } from "drizzle-orm";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
-router.get("/streak", async (_req, res) => {
+router.get("/streak", requireAuth, async (req, res) => {
   const rows = await db
     .select({ date: entriesTable.date })
     .from(entriesTable)
+    .where(eq(entriesTable.userId, req.userId))
     .orderBy(desc(entriesTable.date));
 
   const today = new Date().toISOString().split("T")[0];
@@ -22,9 +24,7 @@ router.get("/streak", async (_req, res) => {
       if (dates.has(d)) {
         currentStreak++;
         cursor.setDate(cursor.getDate() - 1);
-      } else {
-        break;
-      }
+      } else break;
     }
   } else {
     cursor.setDate(cursor.getDate() - 1);
@@ -33,9 +33,7 @@ router.get("/streak", async (_req, res) => {
       if (dates.has(d)) {
         currentStreak++;
         cursor.setDate(cursor.getDate() - 1);
-      } else {
-        break;
-      }
+      } else break;
     }
   }
 
@@ -49,20 +47,12 @@ router.get("/streak", async (_req, res) => {
       const prev = new Date(sortedDates[i - 1]);
       const curr = new Date(sortedDates[i]);
       const diff = (curr.getTime() - prev.getTime()) / (1000 * 60 * 60 * 24);
-      if (diff === 1) {
-        tempStreak++;
-      } else {
-        tempStreak = 1;
-      }
+      tempStreak = diff === 1 ? tempStreak + 1 : 1;
     }
     if (tempStreak > longestStreak) longestStreak = tempStreak;
   }
 
-  res.json({
-    currentStreak,
-    longestStreak,
-    todayLogged: dates.has(today),
-  });
+  res.json({ currentStreak, longestStreak, todayLogged: dates.has(today) });
 });
 
 export default router;

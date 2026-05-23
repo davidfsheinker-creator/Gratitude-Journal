@@ -3,7 +3,7 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { EntryMood } from './entryMood';
 
@@ -13,13 +13,12 @@ export interface Entry {
   date: string;
   /** 1-3 gratitude items */
   gratitudeItems: string[];
-  /** Free-form reflection text */
   reflection: string;
-  /**
-     * Mood tag
-     * @nullable
-     */
+  /** @nullable */
   mood: EntryMood;
-  /** ISO timestamp */
+  starred: boolean;
+  categories: string[];
+  /** @nullable */
+  photoPath?: string | null;
   createdAt: string;
 }

@@ -6,8 +6,8 @@
  * OpenAPI spec version: 0.2.0
  */
 
-export interface Streak {
-  currentStreak: number;
-  longestStreak: number;
-  todayLogged: boolean;
+export interface User {
+  id: number;
+  email: string;
+  createdAt: string;
 }

@@ -5,9 +5,9 @@
  * Grateful – Gratitude Journal API
  * OpenAPI spec version: 0.2.0
  */
+import type { User } from './user';
 
-export interface Streak {
-  currentStreak: number;
-  longestStreak: number;
-  todayLogged: boolean;
+export interface AuthResponse {
+  token: string;
+  user: User;
 }

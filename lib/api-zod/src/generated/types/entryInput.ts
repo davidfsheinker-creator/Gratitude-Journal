@@ -3,12 +3,11 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import type { EntryInputMood } from './entryInputMood';
 
 export interface EntryInput {
-  /** Date in YYYY-MM-DD format */
   date: string;
   /**
      * @minItems 1
@@ -18,4 +17,5 @@ export interface EntryInput {
   reflection: string;
   /** @nullable */
   mood?: EntryInputMood;
+  categories?: string[];
 }

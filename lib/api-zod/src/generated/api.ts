@@ -3,13 +3,12 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 import * as zod from 'zod';
 
 
 /**
- * Returns server health status
  * @summary Health check
  */
 export const HealthCheckResponse = zod.object({
@@ -18,16 +17,63 @@ export const HealthCheckResponse = zod.object({
 
 
 /**
- * Returns all journal entries ordered by date descending
+ * @summary Create a new account
+ */
+export const signupBodyPasswordMin = 6;
+
+
+
+export const SignupBody = zod.object({
+  "email": zod.string().email(),
+  "password": zod.string().min(signupBodyPasswordMin)
+})
+
+
+/**
+ * @summary Log in to an existing account
+ */
+export const loginBodyPasswordMin = 6;
+
+
+
+export const LoginBody = zod.object({
+  "email": zod.string().email(),
+  "password": zod.string().min(loginBodyPasswordMin)
+})
+
+export const LoginResponse = zod.object({
+  "token": zod.string(),
+  "user": zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "createdAt": zod.string()
+})
+})
+
+
+/**
+ * @summary Get current user
+ */
+export const GetMeResponse = zod.object({
+  "id": zod.number(),
+  "email": zod.string(),
+  "createdAt": zod.string()
+})
+
+
+/**
  * @summary List all journal entries
  */
 export const ListEntriesResponseItem = zod.object({
   "id": zod.number(),
   "date": zod.string().describe('Date in YYYY-MM-DD format'),
   "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
-  "reflection": zod.string().describe('Free-form reflection text'),
-  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable().describe('Mood tag'),
-  "createdAt": zod.string().describe('ISO timestamp')
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
 })
 export const ListEntriesResponse = zod.array(ListEntriesResponseItem)
 
@@ -40,54 +86,68 @@ export const createEntryBodyGratitudeItemsMax = 3;
 
 
 export const CreateEntryBody = zod.object({
-  "date": zod.string().describe('Date in YYYY-MM-DD format'),
+  "date": zod.string(),
   "gratitudeItems": zod.array(zod.string()).min(1).max(createEntryBodyGratitudeItemsMax),
   "reflection": zod.string(),
-  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullish()
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullish(),
+  "categories": zod.array(zod.string()).optional()
 })
 
 
 /**
- * @summary Get journal entry by date
+ * @summary Get all starred/favorite entries
  */
-export const GetEntryByDateParams = zod.object({
-  "date": zod.coerce.string()
-})
-
-export const GetEntryByDateResponse = zod.object({
+export const GetFavoritesResponseItem = zod.object({
   "id": zod.number(),
   "date": zod.string().describe('Date in YYYY-MM-DD format'),
   "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
-  "reflection": zod.string().describe('Free-form reflection text'),
-  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable().describe('Mood tag'),
-  "createdAt": zod.string().describe('ISO timestamp')
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
 })
+export const GetFavoritesResponse = zod.array(GetFavoritesResponseItem)
 
 
 /**
- * @summary Update an existing journal entry
+ * @summary Get entries from 1 week, 1 month, and 1 year ago
  */
-export const UpdateEntryParams = zod.object({
-  "date": zod.coerce.string()
-})
-
-export const updateEntryBodyGratitudeItemsMax = 3;
-
-
-
-export const UpdateEntryBody = zod.object({
-  "gratitudeItems": zod.array(zod.string()).min(1).max(updateEntryBodyGratitudeItemsMax).optional(),
-  "reflection": zod.string().optional(),
-  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullish()
-})
-
-export const UpdateEntryResponse = zod.object({
+export const GetOnThisDayResponse = zod.object({
+  "oneWeekAgo": zod.union([zod.object({
   "id": zod.number(),
   "date": zod.string().describe('Date in YYYY-MM-DD format'),
   "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
-  "reflection": zod.string().describe('Free-form reflection text'),
-  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable().describe('Mood tag'),
-  "createdAt": zod.string().describe('ISO timestamp')
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
+}),zod.null()]),
+  "oneMonthAgo": zod.union([zod.object({
+  "id": zod.number(),
+  "date": zod.string().describe('Date in YYYY-MM-DD format'),
+  "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
+}),zod.null()]),
+  "oneYearAgo": zod.union([zod.object({
+  "id": zod.number(),
+  "date": zod.string().describe('Date in YYYY-MM-DD format'),
+  "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
+}),zod.null()])
 })
 
 
@@ -105,9 +165,12 @@ export const GetWeeklySummaryResponse = zod.object({
   "id": zod.number(),
   "date": zod.string().describe('Date in YYYY-MM-DD format'),
   "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
-  "reflection": zod.string().describe('Free-form reflection text'),
-  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable().describe('Mood tag'),
-  "createdAt": zod.string().describe('ISO timestamp')
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
 })),
   "totalEntries": zod.number(),
   "moodBreakdown": zod.object({
@@ -116,7 +179,60 @@ export const GetWeeklySummaryResponse = zod.object({
   "tough": zod.number(),
   "untagged": zod.number()
 }),
-  "allGratitudeItems": zod.array(zod.string())
+  "allGratitudeItems": zod.array(zod.string()),
+  "categoryBreakdown": zod.record(zod.string(), zod.number())
+})
+
+
+/**
+ * @summary Get journal entry by date
+ */
+export const GetEntryByDateParams = zod.object({
+  "date": zod.coerce.string()
+})
+
+export const GetEntryByDateResponse = zod.object({
+  "id": zod.number(),
+  "date": zod.string().describe('Date in YYYY-MM-DD format'),
+  "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
+})
+
+
+/**
+ * @summary Update an existing journal entry
+ */
+export const UpdateEntryParams = zod.object({
+  "date": zod.coerce.string()
+})
+
+export const updateEntryBodyGratitudeItemsMax = 3;
+
+
+
+export const UpdateEntryBody = zod.object({
+  "gratitudeItems": zod.array(zod.string()).min(1).max(updateEntryBodyGratitudeItemsMax).optional(),
+  "reflection": zod.string().optional(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullish(),
+  "starred": zod.boolean().optional(),
+  "categories": zod.array(zod.string()).optional()
+})
+
+export const UpdateEntryResponse = zod.object({
+  "id": zod.number(),
+  "date": zod.string().describe('Date in YYYY-MM-DD format'),
+  "gratitudeItems": zod.array(zod.string()).describe('1-3 gratitude items'),
+  "reflection": zod.string(),
+  "mood": zod.union([zod.literal('great'),zod.literal('okay'),zod.literal('tough'),zod.literal(null)]).nullable(),
+  "starred": zod.boolean(),
+  "categories": zod.array(zod.string()),
+  "photoPath": zod.string().nullish(),
+  "createdAt": zod.string()
 })
 
 

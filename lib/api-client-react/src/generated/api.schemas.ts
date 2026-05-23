@@ -3,14 +3,30 @@
  * Do not edit manually.
  * Api
  * Grateful – Gratitude Journal API
- * OpenAPI spec version: 0.1.0
+ * OpenAPI spec version: 0.2.0
  */
 export interface HealthStatus {
   status: string;
 }
 
+export interface AuthInput {
+  email: string;
+  /** @minLength 6 */
+  password: string;
+}
+
+export interface User {
+  id: number;
+  email: string;
+  createdAt: string;
+}
+
+export interface AuthResponse {
+  token: string;
+  user: User;
+}
+
 /**
- * Mood tag
  * @nullable
  */
 export type EntryMood = typeof EntryMood[keyof typeof EntryMood] | null;
@@ -28,14 +44,13 @@ export interface Entry {
   date: string;
   /** 1-3 gratitude items */
   gratitudeItems: string[];
-  /** Free-form reflection text */
   reflection: string;
-  /**
-     * Mood tag
-     * @nullable
-     */
+  /** @nullable */
   mood: EntryMood;
-  /** ISO timestamp */
+  starred: boolean;
+  categories: string[];
+  /** @nullable */
+  photoPath?: string | null;
   createdAt: string;
 }
 
@@ -52,7 +67,6 @@ export const EntryInputMood = {
 } as const;
 
 export interface EntryInput {
-  /** Date in YYYY-MM-DD format */
   date: string;
   /**
      * @minItems 1
@@ -62,6 +76,7 @@ export interface EntryInput {
   reflection: string;
   /** @nullable */
   mood?: EntryInputMood;
+  categories?: string[];
 }
 
 /**
@@ -85,6 +100,8 @@ export interface EntryUpdate {
   reflection?: string;
   /** @nullable */
   mood?: EntryUpdateMood;
+  starred?: boolean;
+  categories?: string[];
 }
 
 export type WeeklySummaryMoodBreakdown = {
@@ -94,6 +111,8 @@ export type WeeklySummaryMoodBreakdown = {
   untagged: number;
 };
 
+export type WeeklySummaryCategoryBreakdown = {[key: string]: number};
+
 export interface WeeklySummary {
   startDate: string;
   endDate: string;
@@ -101,6 +120,13 @@ export interface WeeklySummary {
   totalEntries: number;
   moodBreakdown: WeeklySummaryMoodBreakdown;
   allGratitudeItems: string[];
+  categoryBreakdown: WeeklySummaryCategoryBreakdown;
+}
+
+export interface OnThisDay {
+  oneWeekAgo: Entry | null;
+  oneMonthAgo: Entry | null;
+  oneYearAgo: Entry | null;
 }
 
 export interface Streak {

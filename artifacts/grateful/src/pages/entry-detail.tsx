@@ -1,25 +1,45 @@
 import { motion } from "framer-motion";
 import { Link } from "wouter";
-import { useGetEntryByDate, getGetEntryByDateQueryKey } from "@workspace/api-client-react";
+import { useQueryClient } from "@tanstack/react-query";
+import {
+  useGetEntryByDate,
+  useUpdateEntry,
+  getGetEntryByDateQueryKey,
+  getListEntriesQueryKey,
+  getGetFavoritesQueryKey,
+} from "@workspace/api-client-react";
 import { MoodPill } from "@/components/mood-pill";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Star } from "lucide-react";
 
 function formatDate(dateStr: string) {
   const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day);
-  return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" });
+  return new Date(year, month - 1, day).toLocaleDateString("en-US", {
+    weekday: "long", month: "long", day: "numeric", year: "numeric",
+  });
 }
 
 export function EntryDetail({ params }: { params?: { date?: string } }) {
   const date = params?.date ?? "";
+  const queryClient = useQueryClient();
+  const updateEntry = useUpdateEntry();
 
   const { data: entry, isLoading, isError } = useGetEntryByDate(date, {
-    query: {
-      queryKey: getGetEntryByDateQueryKey(date),
-      enabled: !!date,
-      retry: false,
-    },
+    query: { queryKey: getGetEntryByDateQueryKey(date), enabled: !!date, retry: false },
   });
+
+  function toggleStar() {
+    if (!entry) return;
+    updateEntry.mutate(
+      { date, data: { starred: !entry.starred } },
+      {
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: getGetEntryByDateQueryKey(date) });
+          queryClient.invalidateQueries({ queryKey: getListEntriesQueryKey() });
+          queryClient.invalidateQueries({ queryKey: getGetFavoritesQueryKey() });
+        },
+      }
+    );
+  }
 
   if (isLoading) {
     return (
@@ -34,8 +54,7 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
       <div className="flex-1 flex flex-col gap-5 py-2">
         <Link href="/journal">
           <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-            <ArrowLeft className="w-4 h-4" />
-            Back to journal
+            <ArrowLeft className="w-4 h-4" />Back to journal
           </button>
         </Link>
         <div className="flex-1 flex flex-col items-center justify-center text-center py-16">
@@ -49,24 +68,41 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
 
   return (
     <div className="flex-1 flex flex-col gap-5 py-2">
-      <Link href="/journal">
-        <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
-          <ArrowLeft className="w-4 h-4" />
-          Back to journal
+      <div className="flex items-center justify-between">
+        <Link href="/journal">
+          <button className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors">
+            <ArrowLeft className="w-4 h-4" />Back to journal
+          </button>
+        </Link>
+        <button
+          onClick={toggleStar}
+          className={`flex items-center gap-1.5 text-sm transition-colors ${entry.starred ? "text-amber-500" : "text-muted-foreground hover:text-amber-500"}`}
+        >
+          <Star className={`w-4 h-4 ${entry.starred ? "fill-amber-500" : ""}`} />
+          {entry.starred ? "Starred" : "Star"}
         </button>
-      </Link>
+      </div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 8 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-5"
-      >
-        <div className="flex items-start justify-between gap-3">
-          <h1 className="font-serif text-2xl font-semibold text-foreground leading-snug">
-            {formatDate(entry.date)}
-          </h1>
-          {entry.mood && <MoodPill mood={entry.mood} />}
+      <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex flex-col gap-5">
+        <div className="flex items-start justify-between gap-3 flex-wrap">
+          <h1 className="font-serif text-2xl font-semibold text-foreground leading-snug">{formatDate(entry.date)}</h1>
+          <div className="flex items-center gap-2 flex-wrap">
+            {(entry.categories as string[])?.map((cat) => (
+              <span key={cat} className="text-xs px-2.5 py-1 rounded-full bg-secondary text-secondary-foreground border border-border/40">{cat}</span>
+            ))}
+            {entry.mood && <MoodPill mood={entry.mood} />}
+          </div>
         </div>
+
+        {/* Photo */}
+        {entry.photoPath && (
+          <motion.img
+            initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+            src={entry.photoPath}
+            alt="Entry photo"
+            className="rounded-2xl w-full object-cover max-h-56"
+          />
+        )}
 
         {/* Gratitude items */}
         <div className="rounded-2xl bg-card border border-border/60 p-5 flex flex-col gap-4">
@@ -74,9 +110,7 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
           <ul className="flex flex-col gap-3">
             {entry.gratitudeItems.map((item, i) => (
               <motion.li
-                key={i}
-                initial={{ opacity: 0, x: -8 }}
-                animate={{ opacity: 1, x: 0 }}
+                key={i} initial={{ opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.1 + i * 0.08 }}
                 className="flex items-start gap-3"
               >
@@ -90,9 +124,7 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
         {/* Reflection */}
         {entry.reflection && (
           <motion.div
-            initial={{ opacity: 0, y: 8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.25 }}
+            initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }}
             className="rounded-2xl bg-card border border-border/60 p-5 flex flex-col gap-3"
           >
             <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Reflection</p>
@@ -100,7 +132,6 @@ export function EntryDetail({ params }: { params?: { date?: string } }) {
           </motion.div>
         )}
 
-        {/* Meta */}
         <p className="text-xs text-muted-foreground/50 text-right">
           Written {new Date(entry.createdAt).toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}
         </p>
