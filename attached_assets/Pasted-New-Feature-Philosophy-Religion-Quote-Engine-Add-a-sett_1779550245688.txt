@@ -1,0 +1,19 @@
+New Feature: Philosophy & Religion Quote Engine
+Add a setting in the app where users can select a personal philosophy or spiritual tradition. Based on their daily gratitude entries, the app should surface a relevant quote that resonates with their chosen tradition.
+Settings Screen
+	•	Add a “My Tradition” section in user settings with a clean selection UI (cards or a styled dropdown)
+	•	Options: Stoicism, Buddhism, Christianity, Islam, Judaism, Hinduism, Taoism, Taoism, Secular Humanism, Existentialism, and “No Preference”
+	•	Selection is saved to the user’s account in the database (not just localStorage) so it persists across devices
+	•	Easy to change at any time from settings
+	•	On onboarding/signup, ask the user to select their tradition as a soft optional step with friendly copy like “What tradition resonates with you? We’ll personalize your experience.” with a “Skip for now” option
+Quote Generation
+	•	After a user submits a daily entry, call the Claude API (claude-sonnet-4-20250514) with the user’s gratitude items, reflection text, and their selected tradition
+	•	Prompt Claude to return a single short, relevant quote from that tradition that resonates with what the user wrote — include the quote, the source/author, and one sentence explaining the connection to their entry
+	•	Display the quote beautifully on the affirmation screen after entry submission, beneath the existing affirmation message
+	•	Also show the quote at the bottom of any past entry when viewing it in the journal
+Prompt to send Claude API:
+“The user practices [TRADITION]. Today they wrote they are grateful for: [GRATITUDE ITEMS]. Their reflection: [REFLECTION TEXT]. Return a single meaningful quote from the [TRADITION] tradition that resonates with what they shared. Respond only in JSON: { quote: string, source: string, connection: string }”
+Design
+	•	The quote should feel distinct from the affirmation — use an italic serif font, a subtle decorative line above it, and the source in small muted text beneath
+	•	In settings, each tradition option should have a small representative icon or symbol
+	•	Keep the tone reverent but never preachy
