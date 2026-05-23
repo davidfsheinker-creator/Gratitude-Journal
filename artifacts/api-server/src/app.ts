@@ -25,7 +25,15 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const uploadsDir = path.join(process.cwd(), "uploads");
-app.use("/uploads", express.static(uploadsDir));
+app.use(
+  "/uploads",
+  (_req, res, next) => {
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Content-Security-Policy", "default-src 'none'");
+    next();
+  },
+  express.static(uploadsDir),
+);
 
 app.use("/api", router);
 

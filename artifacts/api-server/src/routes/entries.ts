@@ -11,14 +11,45 @@ const router = Router();
 const UPLOADS_DIR = path.join(process.cwd(), "uploads");
 if (!fs.existsSync(UPLOADS_DIR)) fs.mkdirSync(UPLOADS_DIR, { recursive: true });
 
+const ALLOWED_MIME_TYPES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/gif",
+  "image/webp",
+]);
+
+const MIME_TO_EXT: Record<string, string> = {
+  "image/jpeg": ".jpg",
+  "image/png": ".png",
+  "image/gif": ".gif",
+  "image/webp": ".webp",
+};
+
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => cb(null, UPLOADS_DIR),
   filename: (_req, file, cb) => {
-    const ext = path.extname(file.originalname);
+    const ext = MIME_TO_EXT[file.mimetype] ?? ".bin";
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
   },
 });
-const upload = multer({ storage, limits: { fileSize: 10 * 1024 * 1024 } });
+
+function imageOnly(
+  _req: import("express").Request,
+  file: Express.Multer.File,
+  cb: multer.FileFilterCallback,
+) {
+  if (ALLOWED_MIME_TYPES.has(file.mimetype)) {
+    cb(null, true);
+  } else {
+    cb(new Error("Only image files (JPEG, PNG, GIF, WEBP) are allowed"));
+  }
+}
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 10 * 1024 * 1024 },
+  fileFilter: imageOnly,
+});
 
 function parseEntry(row: typeof entriesTable.$inferSelect) {
   return {
@@ -204,21 +235,38 @@ router.put("/entries/:date", requireAuth, async (req, res) => {
   res.json(parseEntry(row));
 });
 
-router.post("/entries/:date/photo", requireAuth, upload.single("photo"), async (req, res) => {
-  const { date } = req.params;
+router.post(
+  "/entries/:date/photo",
+  requireAuth,
+  (req, res, next) => {
+    upload.single("photo")(req, res, (err) => {
+      if (err) {
+        res.status(400).json({ error: err instanceof Error ? err.message : "Upload failed" });
+        return;
+      }
+      next();
+    });
+  },
+  async (req, res) => {
+    const { date } = req.params;
 
-  if (!req.file) { res.status(400).json({ error: "No photo uploaded" }); return; }
+    if (!req.file) { res.status(400).json({ error: "No photo uploaded" }); return; }
 
-  const photoPath = `/uploads/${req.file.filename}`;
+    const photoPath = `/uploads/${req.file.filename}`;
 
-  const [row] = await db
-    .update(entriesTable)
-    .set({ photoPath })
-    .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
-    .returning();
+    const [row] = await db
+      .update(entriesTable)
+      .set({ photoPath })
+      .where(and(eq(entriesTable.userId, req.userId), eq(entriesTable.date, date)))
+      .returning();
 
-  if (!row) { res.status(404).json({ error: "Entry not found" }); return; }
-  res.json({ photoPath });
-});
+    if (!row) {
+      fs.unlink(req.file.path, () => {});
+      res.status(404).json({ error: "Entry not found" });
+      return;
+    }
+    res.json({ photoPath });
+  },
+);
 
 export default router;
