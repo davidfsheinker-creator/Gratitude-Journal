@@ -1,0 +1,23 @@
+Build a full-stack Gratitude Journal App called “Grateful” using React (frontend) and Node.js/Express with a SQLite database (backend). The app should feel warm, calming, and intentional — like a mindful daily ritual, not a productivity tool.
+Core Features:
+	•	Daily Gratitude Entry: A simple form where the user types 1–3 things they’re grateful for today, with a free-form “reflection” text area for how their day went
+	•	Streak Tracker: Show how many consecutive days the user has logged an entry with a small motivational flame icon
+	•	Past Entries / Journal View: A scrollable timeline of previous entries by date, with the ability to click into any day and re-read it
+	•	Mood Tag: Let the user optionally tag their entry with a simple mood (😊 Great, 😐 Okay, 😔 Tough) — shown as a colored pill on past entries
+	•	Gratitude Prompt: On the entry screen, show a rotating daily writing prompt to inspire reflection (e.g., “What small moment made you smile today?”, “Who showed you kindness recently?”)
+	•	Weekly Summary View: Every Sunday (or on demand), show a digest of the past 7 days — moods at a glance, all gratitude items listed, and a count of total entries that week
+	•	Affirmation on Submit: After saving an entry, display a brief full-screen or overlay moment with a warm randomized message (e.g., “You noticed the good today. That matters.”, “Gratitude is a practice. You showed up.”) with a gentle fade animation before returning to the home screen
+	•	Light & Night Mode: Default to a warm daytime theme (soft creams, amber, dusty rose, sage); night mode should feel like candlelight — deep warm browns, muted golds, soft amber glows. Toggle accessible from the main nav.
+Design Direction:
+	•	Warm, organic aesthetic with soft sunrise tones in light mode; deep candlelight tones in night mode
+	•	Serif or handwriting-style font for headings, clean readable font for body text
+	•	Gentle animations: bloom/fade on entry submission, smooth theme transition
+	•	No harsh UI — this should feel like a paper journal come to life
+Technical Requirements:
+	•	React frontend with React Router for navigation
+	•	Express backend with SQLite using better-sqlite3
+	•	REST API: GET /entries, POST /entries, GET /entries/:date, GET /entries/week/:startDate
+	•	Entries stored with: date, gratitude items (JSON array), reflection text, mood tag, timestamp
+	•	Theme preference saved to localStorage
+	•	Single-user local app, no auth needed
+	•	Include a README.md with setup instructions
