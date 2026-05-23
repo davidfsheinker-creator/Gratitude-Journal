@@ -1,10 +1,7 @@
 {
   "$schema": "https://schema.railway.app/v1.json",
-  "build": {
-    "builder": "NIXPACKS"
-  },
   "deploy": {
-    "buildCommand": "pnpm install --no-frozen-lockfile && pnpm run build",
+    "buildCommand": "pnpm install --no-frozen-lockfile && pnpm --filter !@workspace/mockup-sandbox -r --if-present run build",
     "startCommand": "pnpm --filter @workspace/api-server run start"
   }
 }
