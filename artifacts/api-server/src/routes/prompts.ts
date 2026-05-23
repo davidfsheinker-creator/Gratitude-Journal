@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
@@ -30,7 +31,7 @@ const PROMPTS = [
   "What is a challenge you have overcome that made you stronger?",
 ];
 
-router.get("/prompts/daily", (_req, res) => {
+router.get("/prompts/daily", requireAuth, (_req, res) => {
   const dayOfYear = Math.floor(
     (Date.now() - new Date(new Date().getFullYear(), 0, 0).getTime()) /
       (1000 * 60 * 60 * 24)

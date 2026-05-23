@@ -237,6 +237,22 @@ export const UpdateEntryResponse = zod.object({
 
 
 /**
+ * @summary Upload a photo for a journal entry
+ */
+export const UploadEntryPhotoParams = zod.object({
+  "date": zod.coerce.string()
+})
+
+export const UploadEntryPhotoBody = zod.object({
+  "photo": zod.instanceof(File).optional()
+})
+
+export const UploadEntryPhotoResponse = zod.object({
+  "photoPath": zod.string()
+})
+
+
+/**
  * @summary Get current journaling streak
  */
 export const GetStreakResponse = zod.object({

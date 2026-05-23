@@ -51,6 +51,11 @@ router.post("/entries", requireAuth, async (req, res) => {
     return;
   }
 
+  if (Array.isArray(categories) && categories.length > 4) {
+    res.status(400).json({ error: "A maximum of 4 categories is allowed" });
+    return;
+  }
+
   const existing = await db
     .select()
     .from(entriesTable)
@@ -176,6 +181,11 @@ router.get("/entries/:date", requireAuth, async (req, res) => {
 router.put("/entries/:date", requireAuth, async (req, res) => {
   const { date } = req.params;
   const { gratitudeItems, reflection, mood, starred, categories } = req.body;
+
+  if (categories !== undefined && Array.isArray(categories) && categories.length > 4) {
+    res.status(400).json({ error: "A maximum of 4 categories is allowed" });
+    return;
+  }
 
   const updateData: Partial<typeof entriesTable.$inferInsert> = {};
   if (gratitudeItems !== undefined) updateData.gratitudeItems = JSON.stringify(gratitudeItems);

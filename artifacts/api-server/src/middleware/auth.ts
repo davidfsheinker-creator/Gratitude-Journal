@@ -1,7 +1,10 @@
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.JWT_SECRET ?? "grateful-jwt-secret-dev-only";
+const JWT_SECRET = process.env.JWT_SECRET;
+if (!JWT_SECRET) {
+  throw new Error("JWT_SECRET environment variable is required");
+}
 
 export interface AuthPayload {
   userId: number;
@@ -36,5 +39,5 @@ export function requireAuth(req: Request, res: Response, next: NextFunction): vo
 }
 
 export function signToken(payload: AuthPayload): string {
-  return jwt.sign(payload, JWT_SECRET, { expiresIn: "30d" });
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: "24h" });
 }

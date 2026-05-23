@@ -29,7 +29,9 @@ import type {
   ErrorResponse,
   HealthStatus,
   OnThisDay,
+  PhotoUploadResponse,
   Streak,
+  UploadEntryPhotoBody,
   User,
   WeeklySummary
 } from './api.schemas';
@@ -868,6 +870,82 @@ export const useUpdateEntry = <TError = ErrorType<ErrorResponse>,
         TContext
       > => {
       return useMutation(getUpdateEntryMutationOptions(options));
+    }
+
+export const getUploadEntryPhotoUrl = (date: string,) => {
+
+
+
+
+  return `/api/entries/${date}/photo`
+}
+
+/**
+ * @summary Upload a photo for a journal entry
+ */
+export const uploadEntryPhoto = async (date: string,
+    uploadEntryPhotoBody: UploadEntryPhotoBody, options?: RequestInit): Promise<PhotoUploadResponse> => {
+    const formData = new FormData();
+if(uploadEntryPhotoBody.photo !== undefined) {
+ formData.append(`photo`, uploadEntryPhotoBody.photo);
+ }
+
+  return customFetch<PhotoUploadResponse>(getUploadEntryPhotoUrl(date),
+  {
+    ...options,
+    method: 'POST'
+    ,
+    body:
+      formData,
+  }
+);}
+
+
+
+
+export const getUploadEntryPhotoMutationOptions = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadEntryPhoto>>, TError,{date: string;data: BodyType<UploadEntryPhotoBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+): UseMutationOptions<Awaited<ReturnType<typeof uploadEntryPhoto>>, TError,{date: string;data: BodyType<UploadEntryPhotoBody>}, TContext> => {
+
+const mutationKey = ['uploadEntryPhoto'];
+const {mutation: mutationOptions, request: requestOptions} = options ?
+      options.mutation && 'mutationKey' in options.mutation && options.mutation.mutationKey ?
+      options
+      : {...options, mutation: {...options.mutation, mutationKey}}
+      : {mutation: { mutationKey, }, request: undefined};
+
+
+
+
+      const mutationFn: MutationFunction<Awaited<ReturnType<typeof uploadEntryPhoto>>, {date: string;data: BodyType<UploadEntryPhotoBody>}> = (props) => {
+          const {date,data} = props ?? {};
+
+          return  uploadEntryPhoto(date,data,requestOptions)
+        }
+
+
+
+
+
+
+  return  { mutationFn, ...mutationOptions }}
+
+    export type UploadEntryPhotoMutationResult = NonNullable<Awaited<ReturnType<typeof uploadEntryPhoto>>>
+    export type UploadEntryPhotoMutationBody = BodyType<UploadEntryPhotoBody>
+    export type UploadEntryPhotoMutationError = ErrorType<ErrorResponse>
+
+    /**
+ * @summary Upload a photo for a journal entry
+ */
+export const useUploadEntryPhoto = <TError = ErrorType<ErrorResponse>,
+    TContext = unknown>(options?: { mutation?:UseMutationOptions<Awaited<ReturnType<typeof uploadEntryPhoto>>, TError,{date: string;data: BodyType<UploadEntryPhotoBody>}, TContext>, request?: SecondParameter<typeof customFetch>}
+ ): UseMutationResult<
+        Awaited<ReturnType<typeof uploadEntryPhoto>>,
+        TError,
+        {date: string;data: BodyType<UploadEntryPhotoBody>},
+        TContext
+      > => {
+      return useMutation(getUploadEntryPhotoMutationOptions(options));
     }
 
 export const getGetStreakUrl = () => {

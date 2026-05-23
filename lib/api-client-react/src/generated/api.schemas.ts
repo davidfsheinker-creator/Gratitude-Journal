@@ -139,7 +139,15 @@ export interface DailyPrompt {
   prompt: string;
 }
 
+export interface PhotoUploadResponse {
+  photoPath: string;
+}
+
 export interface ErrorResponse {
   error: string;
 }
+
+export type UploadEntryPhotoBody = {
+  photo?: Blob;
+};
 

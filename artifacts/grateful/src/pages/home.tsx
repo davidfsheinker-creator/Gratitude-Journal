@@ -8,6 +8,7 @@ import {
   useGetEntryByDate,
   useCreateEntry,
   useUpdateEntry,
+  useUploadEntryPhoto,
   useGetOnThisDay,
   getListEntriesQueryKey,
   getGetStreakQueryKey,
@@ -59,6 +60,7 @@ export function Home() {
   const [isEditing, setIsEditing] = useState(false);
   const [showAffirmation, setShowAffirmation] = useState(false);
   const [affirmation, setAffirmation] = useState("");
+  const MAX_CATEGORIES = 4;
   const photoInputRef = useRef<HTMLInputElement>(null);
 
   const { data: prompt } = useGetDailyPrompt();
@@ -72,6 +74,7 @@ export function Home() {
 
   const createEntry = useCreateEntry();
   const updateEntry = useUpdateEntry();
+  const uploadPhoto = useUploadEntryPhoto();
   const hasEntry = !!todayEntry;
 
   useEffect(() => {
@@ -93,20 +96,10 @@ export function Home() {
   }
 
   function toggleCategory(cat: string) {
-    setSelectedCategories((prev) =>
-      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat]
-    );
-  }
-
-  async function uploadPhoto(date: string) {
-    if (!photoFile) return;
-    const token = localStorage.getItem("grateful_token");
-    const form = new FormData();
-    form.append("photo", photoFile);
-    await fetch(`/api/entries/${date}/photo`, {
-      method: "POST",
-      headers: token ? { Authorization: `Bearer ${token}` } : {},
-      body: form,
+    setSelectedCategories((prev) => {
+      if (prev.includes(cat)) return prev.filter((c) => c !== cat);
+      if (prev.length >= MAX_CATEGORIES) return prev;
+      return [...prev, cat];
     });
   }
 
@@ -126,12 +119,18 @@ export function Home() {
       queryClient.invalidateQueries({ queryKey: getGetOnThisDayQueryKey() });
     };
 
+    async function doPhotoUpload() {
+      if (photoFile) {
+        await uploadPhoto.mutateAsync({ date: TODAY, data: { photo: photoFile } });
+      }
+    }
+
     if (hasEntry && isEditing) {
       updateEntry.mutate(
         { date: TODAY, data: { gratitudeItems, reflection, mood: mood ?? null, categories: selectedCategories } },
         {
           onSuccess: async () => {
-            await uploadPhoto(TODAY);
+            await doPhotoUpload();
             invalidateAll();
             setIsEditing(false);
             setShowAffirmation(true);
@@ -144,7 +143,7 @@ export function Home() {
         { data: { date: TODAY, gratitudeItems, reflection, mood: mood ?? null, categories: selectedCategories } },
         {
           onSuccess: async () => {
-            await uploadPhoto(TODAY);
+            await doPhotoUpload();
             invalidateAll();
             setShowAffirmation(true);
             setTimeout(() => { setShowAffirmation(false); navigate("/journal"); }, 2800);
@@ -319,15 +318,22 @@ export function Home() {
 
           {/* Categories */}
           <div className="flex flex-col gap-2">
-            <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Categories (optional)</p>
+            <div className="flex items-center justify-between">
+              <p className="text-xs uppercase tracking-widest text-muted-foreground font-medium">Categories (optional)</p>
+              {selectedCategories.length >= MAX_CATEGORIES && (
+                <p className="text-xs text-muted-foreground/60">Max {MAX_CATEGORIES} selected</p>
+              )}
+            </div>
             <div className="flex flex-wrap gap-2">
               {CATEGORIES.map((cat) => {
                 const active = selectedCategories.includes(cat);
+                const disabled = !active && selectedCategories.length >= MAX_CATEGORIES;
                 return (
                   <button
                     key={cat} type="button"
                     onClick={() => toggleCategory(cat)}
-                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${active ? "bg-secondary text-secondary-foreground border-secondary" : "border-border text-muted-foreground hover:border-border/80"}`}
+                    disabled={disabled}
+                    className={`text-xs px-3 py-1.5 rounded-full border transition-all ${active ? "bg-secondary text-secondary-foreground border-secondary" : disabled ? "border-border/40 text-muted-foreground/30 cursor-not-allowed" : "border-border text-muted-foreground hover:border-border/80"}`}
                   >
                     {cat}
                   </button>
