@@ -1,0 +1,36 @@
+Build a full-stack Gratitude Journal App called “Grateful” using React (frontend) and Node.js/Express with a SQLite database (backend). The app should feel warm, calming, and intentional — like a mindful daily ritual, not a productivity tool.
+Authentication
+	•	Users must sign up with an email and password to use the app
+	•	Use JWT tokens for sessions and bcrypt for password hashing
+	•	Each user has their own completely isolated journal — entries, streaks, mood data, and preferences are all tied to their account
+	•	On first sign-up, the account starts fresh with zero entries and a clean slate
+	•	Include a warm, on-brand sign-in and sign-up screen that matches the app’s aesthetic
+	•	No example or placeholder entries — the database starts completely empty for every new user
+Core Features
+	•	Daily Gratitude Entry: A simple form where the user writes 1–3 things they’re grateful for, with a free-form reflection text area for how their day went
+	•	Streak Tracker: Show how many consecutive days the user has logged an entry with a small motivational flame icon
+	•	Past Entries / Journal View: A scrollable timeline of previous entries by date; clicking any day opens the full entry
+	•	Mood Tag: Optionally tag each entry with a mood (😊 Great, 😐 Okay, 😔 Tough) shown as a colored pill on past entries
+	•	Gratitude Prompt: Show a rotating daily writing prompt on the entry screen to inspire reflection (e.g., “What small moment made you smile today?”, “Who showed you kindness recently?”)
+	•	Weekly Summary View: Available every Sunday or on demand — shows a digest of the past 7 days including moods at a glance, all gratitude items listed, and total entries that week
+	•	Affirmation on Submit: After saving an entry, display a brief warm full-screen overlay with a randomized affirming message (e.g., “You noticed the good today. That matters.”, “Gratitude is a practice. You showed up.”) with a gentle fade animation before returning home
+	•	Light & Night Mode: Default warm daytime theme (soft creams, amber, dusty rose, sage); night mode feels like candlelight (deep warm browns, muted golds, soft amber glows). Toggle in the main nav, preference saved to localStorage.
+	•	Search & Filter: Search past entries by keyword or filter by mood tag
+	•	Favorite / Star an Entry: Mark entries that resonate so they can be revisited in a dedicated Favorites view
+	•	“On This Day”: On the home screen, surface what the user was grateful for 1 week, 1 month, and 1 year ago if entries exist for those dates
+	•	Gratitude Categories: Tag entries with categories (e.g., Family, Health, Work, Simple Pleasures) and show a breakdown chart of what the user is most grateful for
+	•	Photo Attachment: Allow users to attach one photo per entry, stored locally, displayed in the journal view
+	•	Monthly Mood Calendar: A calendar view where each day is color-coded by mood, giving a beautiful visual overview of the month
+Design Direction
+	•	Warm, organic aesthetic — soft sunrise tones in light mode; deep candlelight tones in night mode
+	•	Serif or handwriting-style font for headings, clean readable font for body text
+	•	Gentle animations: bloom/fade on entry submission, smooth theme transition, staggered page load reveals
+	•	No harsh UI — this should feel like a paper journal come to life, not a productivity dashboard
+Technical Requirements
+	•	React frontend with React Router for all navigation
+	•	Express backend with SQLite using better-sqlite3
+	•	REST API endpoints: POST /auth/signup, POST /auth/login, GET /entries, POST /entries, GET /entries/:date, GET /entries/week/:startDate, GET /entries/favorites, GET /entries/onthisday
+	•	All entry routes protected by JWT middleware — users only ever see their own data
+	•	Entries stored with: userId, date, gratitude items (JSON array), reflection text, mood tag, category tags (JSON array), photo path, starred boolean, timestamp
+	•	Theme preference saved to localStorage
+	•	Include a README.md with setup instructions and how to run locally
